@@ -237,38 +237,56 @@ You can modify several aspects of the RL controller:
 •	Reward function: The default reward is the negative of the maximum temperature. You can incorporate power consumption, PUE, or other metrics into the reward to encourage efficient operation.
 •	Policy update: The Q‑learning update uses a learning rate (‘lr’), discount factor (‘gamma’), and exploration rate (‘epsilon’). Adjust these parameters to influence learning speed and exploration.
 •	Stable‑Baselines training: If ‘stable‑baselines3’ is installed, call ‘rl_controller.train_stable_baselines(hall, timesteps=50000)’ to train a PPO agent in a more robust environment. This requires converting the simulator into a Gymnasium environment and may provide better performance than tabular Q‑learning.
+
 3. Simulator Modification
 The ‘DataHall’ class implements the core thermal physics and is defined in ‘simulator.py’. The hall maintains a grid of temperatures and lists of ‘ServerRack’ and ‘CoolingUnit’ objects. Temperatures evolve according to a simple finite difference scheme: at each internal grid point, the new temperature tends towards the average of its four neighbours (up, down, left, right). This discrete approximation is analogous to the continuous heat‑conduction equation where the temperature at a node equals the average of its neighbours. Racks add heat proportional to their power draw, while cooling units remove heat based on a setpoint and control signal. PUE is computed as total facility power divided by IT power.
+
 3.1 Changing Grid Size and Layout
 You can change the physical size of the simulated hall by adjusting the ‘rows’ and ‘cols’ parameters when calling ‘create_grid()’. Larger grids provide higher spatial resolution but require more computation. After generating the hall, you can assign server racks and cooling units to different coordinates to explore alternative layouts. Think about placing cooling units near hot spots or distributing racks evenly to prevent thermal bottlenecks.
+
 3.2 Modifying Rack and Cooling Parameters
 Each ‘ServerRack’ has attributes for CPU load, base power, maximum power, and a fan failure multiplier. You can set these attributes manually to create heterogeneous racks or simulate varying workloads. For example, to double the idle power of a particular rack, set ‘rack.base_power = 1000.0’ before running the simulation. Similarly, the ‘CoolingUnit’ class exposes a ‘setpoint’ and a ‘max_cooling_power’. Lowering the setpoint increases cooling aggressiveness, and increasing ‘max_cooling_power’ allows the unit to extract more heat.
+
 3.3 Adjusting Thermal Physics
 The ‘DataHall.step()’ method updates the temperature grid by blending each cell towards the average of its four neighbours and adding rack and cooling contributions. If you wish to implement more sophisticated physics, you can modify this method. For example, you could introduce anisotropic thermal conductivity, add convective air flows, or incorporate heat accumulation over time. Such modifications require careful numerical stability analysis but offer a richer representation of real data centres. Remember that stability often depends on the timestep ‘dt’ and grid spacing; a smaller ‘dt’ yields more stable results at the cost of slower simulations.
+
 4. Data Source Replacement: Switching to Real‑World Data
 In the baseline simulator, CPU loads and faults are synthetic. To make the simulation more realistic, you can feed real sensor data or workload traces into the model. Here is a general approach:
+
 4.1 Collect Real Sensor Data
 Gather temperature and power readings from sensors in an actual data centre or from publicly available datasets. Ensure that the measurements correspond to the positions of racks and cooling units in the simulated grid. Each data record should include a timestamp, rack identifier, inlet temperature, exhaust temperature, and power draw.
+
 4.2 Integrate Data into the Simulator
 Modify the ‘ServerRack.update()’ method to accept sensor readings as inputs instead of computing heat generation purely from CPU load. For example, you could read a CSV file into a dictionary mapping ‘(time, rack_id)’ to measured power and then update the rack’s ‘power_draw’ accordingly. Likewise, adjust the control logic to work with real inlet temperatures by setting ‘rack.inlet_temp’ to the measured value.
+
 4.3 Feeding Real Loads
 If you have trace data for CPU utilisation, assign these values to ‘rack.cpu_load’ over time. This approach enables the simulation to replicate the dynamic workload patterns observed in production systems. Combined with real temperature sensors, the twin becomes a powerful tool for testing control algorithms under realistic conditions.
+
 When working with real data, consider the sampling rate, data quality, and missing values. Preprocess your data to fill gaps and align timestamps with the simulation timestep. You can also connect the logger to a time‑series database or MQTT broker for continuous real‑time operation.
+
 5. File Descriptions
 This project includes several Python scripts and notebooks. Understanding their structure helps you extend or modify the simulator. The following subsections describe each file briefly and provide key code excerpts.
+
 5.1 Tutorial Notebooks
-DCDT_Tutorial_Part1.ipynb: Demonstrates how to set up the hall, run a simulation using a PID and RL controller, and export telemetry. The notebook explains modelling principles, optional package installation, grid construction, simulator creation, the main simulation loop, and data logging.
-DCDT_Tutorial_Part2.ipynb: Extends Part 1 to inject faults into the system. It introduces additional code to calculate the number of racks affected by fan and spike faults, injects them at specified timesteps, and shows how the system responds. The conclusion suggests further experiments such as new layouts, varying fault sequences, training RL policies and modifying the reward function.
-5.2 simulator.py
+**DCDT_Tutorial_Part1.ipynb**: Demonstrates how to set up the hall, run a simulation using a PID and RL controller, and export telemetry. The notebook explains modelling principles, optional package installation, grid construction, simulator creation, the main simulation loop, and data logging.
+
+**DCDT_Tutorial_Part2.ipynb:** Extends Part 1 to inject faults into the system. It introduces additional code to calculate the number of racks affected by fan and spike faults, injects them at specified timesteps, and shows how the system responds. The conclusion suggests further experiments such as new layouts, varying fault sequences, training RL policies and modifying the reward function.
+
+5.2 **simulator.py**
 Defines the core simulator. It contains data classes for ‘ServerRack’ and ‘CoolingUnit’ and the ‘DataHall’ class. The ‘DataHall’ maintains a temperature grid, calculates heat flows using a finite difference scheme, updates racks and cooling units, computes PUE, and supports fault injection. The continuous heat‑conduction equation is approximated discretely so that the temperature at an internal node equals the average of its four neighbours. PUE is calculated as the ratio of total facility power to IT power.
-5.3 controllers.py
-Implements control strategies. The ‘PIDController’ class performs Proportional-Integral-Derivative control and sends the same control signal to all cooling units. The ‘RLController’ wraps a Q‑learning agent and updates its policy online based on the maximum room temperature. The file also contains an optional method to train an RL policy using stable‑baselines if the package is available. Finally, ‘ControlSwitch’ toggles between controllers at runtime.
-5.4 grid_editor.py
+
+5.3 **controllers.py**
+Implements control strategies. The ‘**PID**Controller’ class performs **P**roportional-**I**ntegral-**D**erivative control and sends the same control signal to all cooling units. The ‘RLController’ wraps a Q‑learning agent and updates its policy online based on the maximum room temperature. The file also contains an optional method to train an RL policy using stable‑baselines if the package is available. Finally, ‘ControlSwitch’ toggles between controllers at runtime.
+
+5.4 **grid_editor.py**
 Provides an interactive GUI for selecting server racks and cooling units. It displays a grid of cells in Colab; a single click places a rack and a double click places a cooling unit. After submission, the chosen coordinates are returned to Python. The file defines a global ‘server_racks’ and ‘cooling_systems’ list and includes CSS/JS code to draw icons and manage user interactions.
-5.5 dashboard.py
+
+5.5 **dashboard.py**
 Visualises the simulation state. It uses Plotly to generate a heatmap of the temperature grid and two line charts for PUE and power usage. The dashboard accumulates time, PUE and power values to show trends over the simulation. It resets its history after a defined number of steps to avoid memory buildup.
-5.6 logger.py
+
+5.6 **logger.py**
 Implements a simple telemetry logger. It collects dictionaries emitted by the simulator and exports them to JSON or CSV. The CSV export flattens nested data structures so that each rack’s power draw and the room metrics become separate columns. Students can extend this class to push data to external systems.
+
 6. Links & References
 The following links and references were used in the preparation of this guide and provide additional context:
 •	https://en.wikipedia.org/wiki/Power_usage_effectiveness
