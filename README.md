@@ -289,13 +289,21 @@ Implements a simple telemetry logger. It collects dictionaries emitted by the si
 
 6. Links & References
 The following links and references were used in the preparation of this guide and provide additional context:
+
 •	https://en.wikipedia.org/wiki/Power_usage_effectiveness
+
 •	https://www.techtarget.com/searchdatacenter/definition/power-usage-effectiveness-PUE
+
 •	https://gymnasium.farama.org/introduction/migration_guide/
+
 •	https://pypi.org/project/stable-baselines3/
+
 •	https://www.energy.gov/articles/doe-releases-new-report-evaluating-increase-electricity-demand-data-centers
+
 •	https://moodle2.units.it/pluginfile.php/598351/mod_resource/content/9/FD_handout19.03.2024.pdf
+
 •	https://www.socomec.us/en-us/solutions/business/data-centers/understanding-power-consumption-data-centers
+
 •	https://www.parkplacetechnologies.com/blog/data-center-cooling-systems-benefits-comparisons/
 
 
