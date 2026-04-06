@@ -2,12 +2,7 @@ from google.colab import output
 from IPython.display import HTML, display
 import json
 
-# Python global variables
-server_racks = []
-cooling_systems = []
-
 def create_grid(rows=5, cols=5):
-    global server_racks, cooling_systems
     print("Single Click: Server Rack | Double Click: Cooling Unit")
 
     html_code = f"""
@@ -131,3 +126,4 @@ def create_grid(rows=5, cols=5):
     cooling_systems = result['double']
 
     print(f"Selection Saved! \nServer Racks ({len(server_racks)}): {server_racks}\nCooling Units ({len(cooling_systems)}): {cooling_systems}")
+    return server_racks, cooling_systems
